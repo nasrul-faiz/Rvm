@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { useRoadDistances } from "@/hooks/use-road-distances"
 import { useRegisterRefresh } from "@/contexts/RefreshContext"
-import { ClipboardList, List, Info, Plus, Check, X, Edit2, Trash2, Search, Save, ArrowUp, ArrowDown, Truck, Cog, CheckCircle2, MapPin, Route, AlertCircle, History, MapPinned, TableProperties, Shrink, Expand, ChevronUp, ChevronDown, ChevronsUpDown, Filter, ChevronLeft, ChevronRight, RotateCcw, Layers, GripVertical, Columns, ArrowUpDown, Eye, EyeOff, Lock, Navigation2, Map as MapIcon, SlidersHorizontal, Share2, Copy, Check as CheckIcon, ExternalLink } from "lucide-react"
+import { ClipboardList, List, Info, Plus, Check, X, Edit2, Trash2, Search, Save, ArrowUp, ArrowDown, Truck, Cog, CheckCircle2, MapPin, Route, AlertCircle, History, MapPinned, TableProperties, Shrink, Expand, ChevronUp, ChevronDown, ChevronsUpDown, ChevronLeft, ChevronRight, RotateCcw, Layers, GripVertical, Columns, ArrowUpDown, Eye, EyeOff, Lock, Navigation2, Map as MapIcon, SlidersHorizontal, Share2, Copy, Check as CheckIcon, ExternalLink } from "lucide-react"
 import { cn, parseSmartQuery, isDeliveryActive } from "@/lib/utils"
 import { optimizeRouteOrder } from "@/lib/route-optimizer"
 import { toast } from "sonner"
@@ -33,6 +33,21 @@ import {
 } from "@/components/ui/tooltip"
 import { PageHeader } from "@/components/ui/page-header"
 import { Separator } from "@/components/ui/separator"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface RouteChangelog {
   id: string
@@ -607,8 +622,6 @@ export function RouteList({ variant = 'route-list' }: RouteListProps) {
   const [routeToDelete, setRouteToDelete] = useState<Route | null>(null)
   const [newRoute, setNewRoute] = useState({ name: "", code: "", shift: "AM" })
   const [searchQuery, setSearchQuery] = useState("")
-  const [filterModalOpen, setFilterModalOpen] = useState(false)
-  const [filterModalTab, setFilterModalTab] = useState<'shift' | 'region'>('shift')
   const [combinedFilter, setCombinedFilter] = useState<RouteCombinedFilter>('all')
   const { region: filterRegion, shift: filterShift } = useMemo(
     () => parseRouteCombinedFilter(combinedFilter),
@@ -2477,170 +2490,112 @@ export function RouteList({ variant = 'route-list' }: RouteListProps) {
             description="Manage route planning, stops, and delivery updates in one place."
           />
           <div className="mt-4 flex flex-wrap items-center gap-3 sm:mt-5">
-            <div className="relative z-30 min-w-0 flex-1 sm:flex-none sm:w-[340px] lg:w-[400px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/50 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search routes… (e.g. KL am, Sel 3 pm)"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className={`w-full h-11 sm:h-12 pl-11 pr-10 bg-background border rounded-lg text-[12px] md:text-[12px] text-foreground font-[inherit] placeholder:text-muted-foreground/50 outline-none transition-all duration-200 ${
-                searchQuery.trim()
-                  ? "border-primary/50 ring-2 ring-primary/20"
-                  : "border-input focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              }`}
-            />
-            {searchQuery && (
+            <InputGroup className="relative z-30 min-w-0 flex-1 sm:flex-none sm:w-[340px] lg:w-[400px] h-11 sm:h-12">
+              <InputGroupAddon align="inline-start">
+                <Search className="size-4 text-muted-foreground/50" />
+              </InputGroupAddon>
+              <InputGroupInput
+                placeholder="Search routes… (e.g. KL am, Sel 3 pm)"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="text-[12px] placeholder:text-muted-foreground/50"
+              />
+              {searchQuery && (
+                <InputGroupAddon align="inline-end">
+                  <InputGroupButton
+                    size="icon-xs"
+                    variant="ghost"
+                    aria-label="Clear search"
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X className="size-3.5" />
+                  </InputGroupButton>
+                </InputGroupAddon>
+              )}
+              <InputGroupAddon align="inline-end">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <InputGroupButton
+                      variant="ghost"
+                      className={cn(
+                        "pr-1.5! text-[11px] gap-1 font-medium",
+                        combinedFilter !== 'all' && "text-primary"
+                      )}
+                    >
+                      {combinedFilter !== 'all'
+                        ? [filterShift !== 'all' ? filterShift : null, filterRegion !== 'all' ? filterRegion : null].filter(Boolean).join(' · ')
+                        : 'Filter'
+                      }
+                      <ChevronDown className="size-3" />
+                    </InputGroupButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-[140px]">
+                    <DropdownMenuLabel className="text-[11px]">Shift</DropdownMenuLabel>
+                    <DropdownMenuGroup>
+                      {([
+                        { value: 'all', label: 'All Shifts' },
+                        { value: 'AM', label: 'AM' },
+                        { value: 'PM', label: 'PM' },
+                      ] as const).map(opt => (
+                        <DropdownMenuItem
+                          key={opt.value}
+                          onClick={() => setShiftFilter(opt.value)}
+                          className="text-[12px] gap-2"
+                        >
+                          <Check className={cn("size-3", filterShift === opt.value ? "opacity-100" : "opacity-0")} />
+                          {opt.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuGroup>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel className="text-[11px]">Region</DropdownMenuLabel>
+                    <DropdownMenuGroup>
+                      {([
+                        { value: 'all', label: 'All Regions' },
+                        { value: 'KL', label: 'KL' },
+                        { value: 'Sel', label: 'Sel' },
+                      ] as const).map(opt => (
+                        <DropdownMenuItem
+                          key={opt.value}
+                          onClick={() => setRegionFilter(opt.value)}
+                          className="text-[12px] gap-2"
+                        >
+                          <Check className={cn("size-3", filterRegion === opt.value ? "opacity-100" : "opacity-0")} />
+                          {opt.label}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuGroup>
+                    {combinedFilter !== 'all' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => setCombinedFilter('all')}
+                          className="text-[12px] gap-2 text-muted-foreground"
+                        >
+                          <RotateCcw className="size-3" />
+                          Reset Filter
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </InputGroupAddon>
+            </InputGroup>
+
+            {hasActiveSearchOrFilter && (
               <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-foreground transition-colors"
+                type="button"
+                onClick={() => {
+                  setSearchQuery("")
+                  setCombinedFilter('all')
+                }}
+                className="flex items-center gap-1.5 h-10 px-3.5 rounded-lg border border-input bg-background text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/40 animate-in fade-in zoom-in-95 shrink-0"
               >
-                <X className="size-4" />
+                <X className="size-3.5" />
+                Reset
               </button>
             )}
-
           </div>
-
-          <button
-            type="button"
-            onClick={() => setFilterModalOpen(true)}
-            className={cn(
-              "relative flex items-center gap-1.5 h-10 px-3.5 rounded-lg border text-xs font-medium transition-colors shrink-0",
-              combinedFilter !== 'all'
-                ? 'border-primary bg-primary/10 text-primary'
-                : 'border-input bg-background text-muted-foreground hover:text-foreground hover:bg-muted/40'
-            )}
-            aria-label="Open route filters"
-          >
-            <Filter className="size-3.5" />
-            Filter
-            {combinedFilter !== 'all' && (
-              <span className="flex items-center justify-center w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold">
-                1
-              </span>
-            )}
-          </button>
-
-          {hasActiveSearchOrFilter && (
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("")
-                setCombinedFilter('all')
-              }}
-              className="flex items-center gap-1.5 h-10 px-3.5 rounded-lg border border-input bg-background text-xs font-medium text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/40 animate-in fade-in zoom-in-95 shrink-0"
-            >
-              <X className="size-3.5" />
-              Reset
-            </button>
-          )}
-          </div>
-
-          <Dialog open={filterModalOpen} onOpenChange={setFilterModalOpen}>
-            <DialogContent className="sm:max-w-[400px]">
-              <DialogHeader>
-                <DialogTitle>Filter Routes</DialogTitle>
-              </DialogHeader>
-
-              <div className="mt-2 flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 p-1.5">
-                <button
-                  type="button"
-                  onClick={() => setFilterModalTab('shift')}
-                  className={`flex-1 rounded-md px-3 py-2.5 text-xs font-semibold transition-colors ${
-                    filterModalTab === 'shift'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Filter by Shift
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFilterModalTab('region')}
-                  className={`flex-1 rounded-md px-3 py-2.5 text-xs font-semibold transition-colors ${
-                    filterModalTab === 'region'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  Filter by Region
-                </button>
-              </div>
-
-              {filterModalTab === 'shift' ? (
-                <div className="mt-3.5 grid grid-cols-3 gap-2.5">
-                  {([
-                    { value: 'all', label: 'All' },
-                    { value: 'AM', label: 'AM' },
-                    { value: 'PM', label: 'PM' },
-                  ] as const).map(opt => {
-                    const active = filterShift === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setShiftFilter(opt.value)}
-                        className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition-colors ${
-                          active
-                            ? 'border-primary/45 bg-primary/10 text-primary'
-                            : 'border-border/70 bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="mt-3.5 grid grid-cols-3 gap-2.5">
-                  {([
-                    { value: 'all', label: 'All' },
-                    { value: 'KL', label: 'KL' },
-                    { value: 'Sel', label: 'Sel' },
-                  ] as const).map(opt => {
-                    const active = filterRegion === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setRegionFilter(opt.value)}
-                        className={`rounded-lg border px-3 py-2.5 text-xs font-semibold transition-colors ${
-                          active
-                            ? 'border-primary/45 bg-primary/10 text-primary'
-                            : 'border-border/70 bg-background text-muted-foreground hover:text-foreground hover:bg-muted/50'
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-
-              <div className="mt-5 flex items-center justify-between">
-                <p className="text-[11px] text-muted-foreground">Current: {filterRegion} . {filterShift}</p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCombinedFilter('all')}
-                    className="h-8 px-3 text-[11px]"
-                  >
-                    Reset
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => setFilterModalOpen(false)}
-                    className="h-8 px-3 text-[11px]"
-                  >
-                    Done
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
 
         {/* ── Card list (carousel) ── */}
@@ -3217,7 +3172,7 @@ export function RouteList({ variant = 'route-list' }: RouteListProps) {
 
                   <Dialog open={detailDialogOpen && route.id === currentRouteId} onOpenChange={(open) => { if (!open) { setDetailDialogOpen(false); setDialogView('table'); setDetailSearchQuery(''); setSelectedRows([]); setCombinedRouteIds(new Set([currentRouteId])); setShowPolyline(false); setMapRefitToken(0); setMapResizeToken(0) } }}>
                   <DialogContent
-                    overlayClassName="bg-background/80 backdrop-blur-[2px]"
+                    overlayClassName="backdrop-blur-sm bg-black/30"
                     className={`p-0 gap-0 flex flex-col overflow-hidden duration-300 ease-in-out ${
                       detailFullscreen
                         ? '!fixed !inset-0 !translate-x-0 !translate-y-0 !top-0 !left-0 !w-screen !max-w-none !h-dvh !rounded-none !border-0 !shadow-none'
@@ -4322,7 +4277,6 @@ export function RouteList({ variant = 'route-list' }: RouteListProps) {
                     point={selectedPoint}
                     isEditMode={isEditMode && !selectedPointIsStarting}
                     allowMarkerColorEdit={!selectedPointIsStarting && combinedRouteIds.size === 1}
-                    overlayClassName="bg-background/80 backdrop-blur-[2px]"
                     onSave={(updated) => {
                       setDeliveryPoints(prev => prev.map(p => p.code === updated.code ? updated : p))
                       setSelectedPoint(updated)

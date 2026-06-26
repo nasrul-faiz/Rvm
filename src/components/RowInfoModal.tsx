@@ -9,6 +9,20 @@ import "lightgallery/css/lg-thumbnail.css"
 import "lightgallery/css/lg-video.css"
 const noImageSrc = "/noimagefond.png"
 const fallbackNoImageSrc = "https://images.pexels.com/photos/1170986/pexels-photo-1170986.jpeg?auto=compress&cs=tinysrgb&w=100"
+
+let lgModulesCache: { lightGallery: any; lgZoom: any; lgThumbnail: any; lgVideo: any } | null = null
+async function loadLGModules() {
+  if (lgModulesCache) return lgModulesCache
+  const [{ default: lightGallery }, { default: lgZoom }, { default: lgThumbnail }, { default: lgVideo }] =
+    await Promise.all([
+      import('lightgallery'),
+      import('lightgallery/plugins/zoom'),
+      import('lightgallery/plugins/thumbnail'),
+      import('lightgallery/plugins/video'),
+    ])
+  lgModulesCache = { lightGallery, lgZoom, lgThumbnail, lgVideo }
+  return lgModulesCache
+}
 import {
   Dialog,
   DialogContent,
@@ -190,13 +204,13 @@ export function RowInfoModal({ open, onOpenChange, point, isEditMode, allowMarke
       }
       return
     }
+    let cancelled = false
     const init = async () => {
-      await new Promise(r => setTimeout(r, 150))
-      if (!avatarGalleryHostRef.current) return
-      const { default: lightGallery } = await import('lightgallery')
-      const { default: lgZoom } = await import('lightgallery/plugins/zoom')
-      const { default: lgThumbnail } = await import('lightgallery/plugins/thumbnail')
-      const { default: lgVideo } = await import('lightgallery/plugins/video')
+      // Wait two animation frames for the dialog DOM to settle — much faster than a fixed 150 ms delay
+      await new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())))
+      if (cancelled || !avatarGalleryHostRef.current) return
+      const { lightGallery, lgZoom, lgThumbnail, lgVideo } = await loadLGModules()
+      if (cancelled || !avatarGalleryHostRef.current) return
       if (avatarLGInstance.current) {
         avatarLGInstance.current.destroy()
         avatarLGInstance.current = null
@@ -212,6 +226,7 @@ export function RowInfoModal({ open, onOpenChange, point, isEditMode, allowMarke
     }
     init()
     return () => {
+      cancelled = true
       if (avatarLGInstance.current) {
         avatarLGInstance.current.destroy()
         avatarLGInstance.current = null
@@ -265,7 +280,7 @@ export function RowInfoModal({ open, onOpenChange, point, isEditMode, allowMarke
   const hasCoords = point.latitude !== 0 && point.longitude !== 0
 
   // Detect unsaved changes in the editing form
-  const hasChanges = (() => {
+  const hasChanges = useMemo(() => {
     const filteredDrafts = drafts.filter(d => d.key.trim() !== "")
     const originalDescs = (point.descriptions ?? []).filter(d => d.key.trim() !== "")
     if (filteredDrafts.length !== originalDescs.length) return true
@@ -274,7 +289,7 @@ export function RowInfoModal({ open, onOpenChange, point, isEditMode, allowMarke
     }
     if ((markerColor ?? undefined) !== (point.markerColor ?? undefined)) return true
     return false
-  })()
+  }, [drafts, markerColor, point.descriptions, point.markerColor])
 
   const handleAdd = () => setDrafts(prev => [...prev, { key: "", value: "" }])
   const handleRemove = (i: number) => setDrafts(prev => prev.filter((_, idx) => idx !== i))
@@ -358,7 +373,7 @@ export function RowInfoModal({ open, onOpenChange, point, isEditMode, allowMarke
       <Dialog open={open} onOpenChange={(o) => { if (!o) { setPendingUrl(null); setPendingUrlLabel("") } onOpenChange(o) }}>
       <DialogContent
         onInteractOutside={handleDialogInteractOutside}
-        overlayClassName={overlayClassName ?? "backdrop-blur-sm bg-black/35"}
+        overlayClassName={overlayClassName ?? "backdrop-blur-[1.5px] bg-black/5"}
         className="flex max-h-[min(80vh,36rem)] w-[93vw] max-w-[22.5rem] flex-col gap-0 overflow-hidden rounded-[22px] border border-border/80 bg-card p-0 shadow-[0_16px_38px_hsl(var(--foreground)/0.14)] transition-[transform,opacity] duration-300 ease-in-out dark:shadow-[0_18px_42px_hsl(var(--background)/0.55)] md:max-w-[23.5rem]"
       >
         {/* Header */}

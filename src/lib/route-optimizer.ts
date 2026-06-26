@@ -45,15 +45,19 @@ function greedyNearestNeighbor(points: OptimizablePoint[], start: OptimizablePoi
   return ordered;
 }
 
+const TWO_OPT_MAX_ITERATIONS = 500;
+
 function twoOptImprove(points: OptimizablePoint[]): OptimizablePoint[] {
   const improved = [...points];
 
   if (improved.length < 4) return improved;
 
   let changed = true;
+  let iterations = 0;
 
-  while (changed) {
+  while (changed && iterations < TWO_OPT_MAX_ITERATIONS) {
     changed = false;
+    iterations += 1;
     const currentDistance = calculateRouteDistance(improved);
 
     for (let i = 0; i < improved.length - 2; i += 1) {
