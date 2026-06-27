@@ -162,7 +162,7 @@ function Sidebar({
   innerClassName?: string
   innerStyle?: React.CSSProperties
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, open, setOpen, openMobile, setOpenMobile } = useSidebar()
 
   if (collapsible === "none") {
     return (
@@ -224,6 +224,16 @@ function Sidebar({
         data-slot="sidebar-gap"
         className={cn(
           "relative w-0 bg-transparent transition-[width] duration-[250ms] ease-[cubic-bezier(0.4,0,0.6,1)]"
+        )}
+      />
+      <button
+        type="button"
+        aria-label="Close sidebar backdrop"
+        tabIndex={open && collapsible === "offcanvas" ? 0 : -1}
+        onClick={() => setOpen(false)}
+        className={cn(
+          "fixed inset-0 z-40 hidden bg-black/10 backdrop-blur-sm transition-opacity duration-[250ms] ease-[cubic-bezier(0.4,0,0.6,1)] md:block",
+          open && collapsible === "offcanvas" ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         )}
       />
       <div
